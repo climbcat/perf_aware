@@ -59,16 +59,19 @@ unsigned long _hash(unsigned long x) {
 unsigned long g_state[7];
 bool g_didinit = false;
 #define Random() Kiss_Random(g_state)
-void RandInit() {
+unsigned long RandInit(unsigned long seed = 0) {
     if (g_didinit == true)
-        return;
+        return 0;
 
-    struct timeval tm;
-    gettimeofday(&tm, NULL);
-    unsigned long seed = _hash((unsigned long) tm.tv_sec*1000000 + tm.tv_usec);
+    if (seed == 0) {
+        struct timeval tm;
+        gettimeofday(&tm, NULL);
+        seed = _hash((unsigned long) tm.tv_sec*1000000 + tm.tv_usec);
+    }
     Kiss_SRandom(g_state, seed);
 
     g_didinit = true;
+    return seed;
 }
 
 double Rand01() {
