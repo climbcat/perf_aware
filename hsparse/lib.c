@@ -17,6 +17,9 @@ typedef int64_t s64;
 
 typedef double f64;
 
+#define MEGABYTE 1024*1024
+#define GIGABYTE 1024*1024*1024
+
 bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     for (int i = 0; i < argc; ++i) {
         char *arg = argv[i];
