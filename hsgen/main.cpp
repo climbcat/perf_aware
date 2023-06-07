@@ -40,26 +40,57 @@ void CreateHaversinePointsJson(u32 num_points, u32 seed) {
     fclose(file_json);
     fclose(file_bin);
 
-    printf("Haversine distance data generated from seed=%d:\n    sum = %.16f\n    average = %.16f\n", seed, hsdist_sum, hsdist_sum / num_points);
+    printf("Haversine distance data generated from seed=%u:\n    sum = %.16f\n    average = %.16f\n", seed, hsdist_sum, hsdist_sum / num_points);
 }
 
-void RunTests() {
+void Test() {
     printf("running tests ...\n");
     printf("done\n");
 }
 
-int main (int argc, char **argv) {
-    // TODO: cmd line args:
-    //      --test
+u32 ParseInt(char *text) {
+    u32 val = 0;
+    u32 multiplier = 1;
 
-    //RunTests();
+    // signed?
+    bool sgned = text[0] == '-';
+    if (sgned) {
+        ++text;
+    }
+
+    u32 len = strlen(text);
+
+    // decimals before dot
+    for (int i = 0; i < len; ++i) {
+        val += (text[len - 1 - i] - 48) * multiplier;
+        multiplier *= 10;
+    }
+
+    // handle the sign
+    if (sgned) {
+        val *= -1;
+    }
+
+    return val;
+}
+
+int main (int argc, char **argv) {
+    if (ContainsArg("--test", argc, argv)) {
+        Test();
+        exit(0);
+    }
+
+    u32 seed = 0;
+    if (ContainsArg("--seed", argc, argv)) {
+        seed = ParseInt(GetArgValue("--seed", argc, argv));
+    }
+    u32 npoints = 20;
+    if (ContainsArg("--npoints", argc, argv)) {
+        npoints = ParseInt(GetArgValue("--npoints", argc, argv));
+    }
 
     // TODO: cmd line args:
     //      --sectors
-    //      --seed=value where zero means generate new
-    //      --npoints=value
 
-    u32 npoints = 20;
-    u32 seed = 0;
     CreateHaversinePointsJson(npoints, seed);
 }

@@ -1,4 +1,3 @@
-g++ main.cpp -o "haversinepoints"
-./haversinepoints
+g++ main.cpp -o "hsgen"
+./hsgen
 cat hspairs.json
-
