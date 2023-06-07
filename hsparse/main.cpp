@@ -244,7 +244,7 @@ void ParseHsPointsJson(char *filename) {
     Tokenizer tokenizer;
     tokenizer.at = dest_json;
     LoadFilePathBin(filename, (u8*) dest_json);
-    printf("Loaded file '%s' contains:\n%s\n", filename, dest_json);
+    //printf("Loaded file '%s' contains:\n%s\n", filename, dest_json);
 
     // parse floats and put into data storage
     f64* floc = (f64*) malloc(MEGABYTE);
@@ -274,7 +274,7 @@ void ParseHsPointsJson(char *filename) {
         d = ReferenceHaversine(x0, y0, x1, y1, EARTH_RADIUS);
         sum += d;
 
-        printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n", x0, y0, x1, y1, d);
+        //printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n", x0, y0, x1, y1, d);
     }
     mean = sum / npairs;
     printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
