@@ -1,45 +1,5 @@
 #include "lib.c"
 
-
-static f64 Square(f64 A)
-{
-    f64 Result = (A*A);
-    return Result;
-}
-
-static f64 Deg2Rad(f64 Degrees)
-{
-    f64 Result = 0.01745329251994329577f * Degrees;
-    return Result;
-}
-
-// NOTE(casey): EarthRadius is generally expected to be 6372.8
-static f64 ReferenceHaversine(f64 X0, f64 Y0, f64 X1, f64 Y1, f64 EarthRadius)
-{
-    /* NOTE(casey): This is not meant to be a "good" way to calculate the Haversine distance.
-       Instead, it attempts to follow, as closely as possible, the formula used in the real-world
-       question on which these homework exercises are loosely based.
-    */
-
-    f64 lat1 = Y0;
-    f64 lat2 = Y1;
-    f64 lon1 = X0;
-    f64 lon2 = X1;
-    
-    f64 dLat = Deg2Rad(lat2 - lat1);
-    f64 dLon = Deg2Rad(lon2 - lon1);
-    lat1 = Deg2Rad(lat1);
-    lat2 = Deg2Rad(lat2);
-    
-    f64 a = Square(sin(dLat/2.0)) + cos(lat1)*cos(lat2)*Square(sin(dLon/2));
-    f64 c = 2.0*asin(sqrt(a));
-    
-    f64 Result = EarthRadius * c;
-    
-    return Result;
-}
-
-
 struct Tokenizer {
     char *at;
 };
@@ -92,41 +52,15 @@ void PrintToken(Token tok) {
 }
 
 inline
-bool IsEndOfFrame(char c) {
-    return
-        c == '\0';
-}
-inline
-bool IsEndOfLine(char c) {
-    return
-        c == '\n' ||
-        c == '\r';
-}
-inline
 bool IsWhitespace(char c) {
     return
         c == ' ' ||
         c == '\t' ||
         c == '\v' ||
         c == '\f' ||
-        IsEndOfLine(c);
+        c == '\n' ||
+        c == '\r';
 }
-inline
-bool IsNumeric(char c) {
-    bool isnum = (c >= '0') && (c <= '9');
-    return isnum;
-}
-inline
-bool IsAlphaOrUnderscore(char c) {
-    bool result = 
-        (c == '_') || ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z'));
-    return result;
-}
-
-void ParseString(Tokenizer *tokenizer) {
-    // TODO: impl, use below. The culprit is "-" minus sign in front of negative numbers...
-}
-
 Token GetToken(Tokenizer *tokenizer) {
 
     // skip white spaces
@@ -191,7 +125,7 @@ Token GetToken(Tokenizer *tokenizer) {
             tok.str = tokenizer->at;
             while (true) {
                 c = *tokenizer->at;
-                if (IsEndOfFrame(c)) {
+                if (c == '\0') {
                     tok.type = TOK_EOF;
                     break;
                 }
@@ -276,7 +210,6 @@ f64 ParseDouble(char *str, u8 len) {
     while ((str[decs_denom] != '.') && (decs_denom < len)) {
         ++decs_denom;
     }
-    // assert(digs_denom < len - 1 && "ParseDouble invalid string");
 
     // decimals before dot
     for (int i = 0; i < decs_denom; ++i) {
@@ -304,14 +237,14 @@ f64 ParseDouble(char *str, u8 len) {
     return val;
 }
 
-
+#define EARTH_RADIUS 6372.8
 
 void ParseHsPointsJson(char *filename) {
     char* dest_json = (char*) malloc(10 * MEGABYTE);
     Tokenizer tokenizer;
     tokenizer.at = dest_json;
     LoadFilePathBin(filename, (u8*) dest_json);
-    printf("loaded file %s:\n%s\n", filename, dest_json);
+    printf("Loaded file '%s' contains:\n%s\n", filename, dest_json);
 
     // parse floats and put into data storage
     f64* floc = (f64*) malloc(MEGABYTE);
@@ -325,21 +258,26 @@ void ParseHsPointsJson(char *filename) {
         }
     } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF);
 
-    u32 npairs = (fidx + 1) / 4;
+    f64 sum = 0;
+    f64 mean = 0;
     u32 idx = 0;
-    f64 x0, y0, x1, y1;
-    printf("pairs and hs result:\n", npairs);
+    f64 x0, y0, x1, y1, d;
+    u32 npairs = (fidx + 1) / 4;
+
     for (int p = 0; p < npairs; ++p) {
         idx = p * 4;
+
         x0 = floc[idx];
         y0 = floc[idx + 1];
         x1 = floc[idx + 2];
         y1 = floc[idx + 3];
-        printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n",
-            x0, y0, x1, y1,
-            ReferenceHaversine(x0, y0, x1, y1, 6372.8)
-            );
+        d = ReferenceHaversine(x0, y0, x1, y1, EARTH_RADIUS);
+        sum += d;
+
+        printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n", x0, y0, x1, y1, d);
     }
+    mean = sum / npairs;
+    printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
 }
 
 
@@ -347,7 +285,7 @@ void Test() {
     printf("Running tests...\n");
 
     u8* dest_json = (u8*) malloc(10 * MEGABYTE);
-    const char *filename = "hspairs_parsetest.json";
+    const char *filename = "parsetest.json";
     LoadFilePathBin((char*) filename, dest_json);
     printf("loaded file %s:\n%s\n", filename, dest_json);
 
@@ -396,7 +334,7 @@ int main (int argc, char **argv) {
         printf("hspoints json filename missing\n");
         exit(0);
     }
+
     char *filename = argv[1];
-    printf("read filename: %s\n", filename);
     ParseHsPointsJson(filename);
 }
