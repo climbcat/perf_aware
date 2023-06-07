@@ -44,8 +44,8 @@ struct Token {
     TokenType type;
 };
 
-void PrintTokenType(TokenType tpe) {
-    switch (tpe) {
+void PrintToken(Token tok) {
+    switch (tok.type) {
     case TOK_UNDEFINED: printf("TOK_UNDEFINED"); break;
     case TOK_INT: printf("TOK_INT"); break;
     case TOK_DOUBLE: printf("TOK_DOUBLE"); break;
@@ -61,8 +61,7 @@ void PrintTokenType(TokenType tpe) {
     case TOK_EOF: printf("TOK_EOF"); break;
     default: printf("unknown token"); break;
     }
-    printf("\n");
-    // TODO: print strings and numbers
+    printf(":    %.*s\n", tok.len, tok.str);
 }
 
 inline
@@ -109,7 +108,7 @@ Token GetToken(Tokenizer *tokenizer) {
     }
 
     Token tok;
-    tok.len = 1;
+    tok.len = 0;
     tok.str = tokenizer->at;
     char c = *tokenizer->at;
 
@@ -123,13 +122,14 @@ Token GetToken(Tokenizer *tokenizer) {
         while (true) {
             c = *tokenizer->at;
             if ((c >= '0') && (c <= '9')) {
-                // ...
+                ++tok.len;
             }
             else if (c == '-') {
                 if (minus_char_found) {
                     error = true;
                 }
                 minus_char_found = true;
+                ++tok.len;
             }
             else if (c == '.') {
                 if (dot_char_found) {
@@ -139,6 +139,7 @@ Token GetToken(Tokenizer *tokenizer) {
                 if (tok.len == 1) {
                     error = true;
                 }
+                ++tok.len;
             }
             else {
                 if (error) {
@@ -149,7 +150,6 @@ Token GetToken(Tokenizer *tokenizer) {
                 }
                 break;
             }
-            ++tok.len;
             ++tokenizer->at;
         }
     }
@@ -181,43 +181,52 @@ Token GetToken(Tokenizer *tokenizer) {
         // semantic symbols
         case ',':
             tok.type = TOK_COMMA;
+            tok.len = 1;
             break;
 
         case ':':
             tok.type = TOK_COLON;
+            tok.len = 1;
             break;        
 
         case '(':
             tok.type = TOK_LBRACK;
+            tok.len = 1;
             break;
 
         case ')':
             tok.type = TOK_RBRACK;
+            tok.len = 1;
             break;
 
         case '[':
             tok.type = TOK_LSQUAREBRACK;
+            tok.len = 1;
             break;
 
         case ']':
             tok.type = TOK_RSQUAREBRACK;
+            tok.len = 1;
             break;
 
         case '{':
             tok.type = TOK_LCURLBRACK;
+            tok.len = 1;
             break;
 
         case '}':
             tok.type = TOK_RCURLBRACK;
+            tok.len = 1;
             break;
         
         case '\0':
             tok.type = TOK_EOF;
+            tok.len = 1;
             return tok;
         
         default:
-            tok.len = 0;
             tok.type = TOK_UNDEFINED;
+            tok.len = 0;
             break;
         }
         ++tokenizer->at;
@@ -237,7 +246,7 @@ void ParseHsPointsJson(char *filename) {
     printf("parse result of <=100 tokens:\n");
     do {
         tok = GetToken(&tokenizer);
-        PrintTokenType(tok.type);
+        PrintToken(tok);
         ++i;
     } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF && i < 100);
 }
