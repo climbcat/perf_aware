@@ -8,6 +8,17 @@ struct HsPair {
     f64 y1 = 0;
 };
 
+HsPair RandomPair(f64 xmin, f64 xmax, f64 ymin, f64 ymax) {
+    HsPair p;
+
+    p.x0 = (xmax - xmin) * RandPM1() + xmin;
+    p.y0 = (ymax - ymin) * RandPM1() + ymin;
+    p.x1 = (xmax - xmin) * RandPM1() + xmin;
+    p.y1 = (ymax - ymin) * RandPM1() + ymin;
+
+    return p;
+}
+
 void CreateHaversinePointsJson(u32 npoints, u32 seed, bool sectors) {
 
     const char *filename_json = "hspairs.json";
@@ -32,10 +43,11 @@ void CreateHaversinePointsJson(u32 npoints, u32 seed, bool sectors) {
         // TODO: select a sector (two random ints from 0-3 to hit x, y sector)
 
         // calculate point pair
-        x0 = 180.0f * RandPM1();
-        y0 =  90.0f * RandPM1();
-        x1 = 180.0f * RandPM1();
-        y1 =  90.0f * RandPM1();
+        HsPair p = RandomPair(-180.0, 180.0, -90.0, 90.0);
+        x0 = p.x0;
+        y0 = p.y0;
+        x1 = p.x1;
+        y1 = p.y1;
 
         // calculate control answer
         hsdist = ReferenceHaversine(x0, y0, x1, y1, earth_radius);
