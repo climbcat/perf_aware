@@ -92,6 +92,11 @@ double RandPM1() {
     return randnum;
 }
 
+int RandMinMaxI(int min, int max) {
+    //assert(max > min);
+    return Random() % (max - min + 1) + min;
+}
+
 
 //
 // cmd-line args

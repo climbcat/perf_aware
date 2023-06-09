@@ -8,6 +8,14 @@ struct HsPair {
     f64 y1 = 0;
 };
 
+struct Sector {
+    f64 xmin = -180.0;
+    f64 xmax = 180.0;
+    f64 ymin = -90.0;
+    f64 ymax = 90.0;
+    f64 sum = 0;
+};
+
 HsPair RandomPair(f64 xmin, f64 xmax, f64 ymin, f64 ymax) {
     HsPair p;
 
@@ -19,7 +27,13 @@ HsPair RandomPair(f64 xmin, f64 xmax, f64 ymin, f64 ymax) {
     return p;
 }
 
-void CreateHaversinePointsJson(u32 npoints, u32 seed, bool sectors) {
+void PrintSector(Sector s) {
+    printf("%f %f %f %f\n", s.xmin, s.xmax, s.ymin, s.ymax);
+}
+
+
+
+void CreateHaversinePointsJson(u32 npoints, u32 seed, bool use_sectors) {
 
     const char *filename_json = "hspairs.json";
     const char *filename_bin = "hsdist.bin";
@@ -27,35 +41,89 @@ void CreateHaversinePointsJson(u32 npoints, u32 seed, bool sectors) {
     FILE *file_bin = fopen(filename_bin, "w");
 
     seed = RandInit(seed);
-    f64 x0, y0, x1, y1, hsdist, hsdist_sum = 0, earth_radius = 6372.8;
+    f64 hsdist;
+    f64 hsdist_sum = 0;
+    f64 earth_radius = 6372.8;
+    HsPair p;
+    Sector s;
 
-    f64 sector_x[3];
-    f64 sector_y[3];
-    f64 sector_sum[3*3];
-    for (int i = 0; i < 4; ++i) {
-        sector_x[i] = 180.0f * RandPM1();
-        sector_y[i] = 90.0f * RandPM1();
+    u8 num_sectors_1d = 4;
+
+    u32 sclen = num_sectors_1d + 1;
+    f64 split_x[sclen];
+    f64 split_y[sclen];
+    split_x[0] = -180.0;
+    split_x[sclen-1] = 180.0;
+    split_y[0] = -90.0;
+    split_y[sclen-1] = 90.0;
+    for (int i = 1; i < sclen - 1; ++i) {
+        split_x[i] = 180.0f * RandPM1();
+        split_y[i] = 90.0f * RandPM1();
     }
+    printf("split_x: %f %f %f %f %f\n", split_x[0], split_x[1], split_x[2], split_x[3], split_x[4]);
+    printf("split_y: %f %f %f %f %f\n\n", split_y[0], split_y[1], split_y[2], split_y[3], split_y[4]);
+    // sort split values
+    f64 swap;
+
+    u32 splitters = 5;
+    for (int j = 0; j < sclen - 1; ++j) {
+        for (int i = 0; i < sclen - 2 - j; ++i) {
+            
+            if (split_x[i] > split_x[i+1]) {
+                swap = split_x[i];
+                split_x[i] = split_x[i+1];
+                split_x[i+1] = swap;
+            }
+            if (split_y[i] > split_y[i+1]) {
+                swap = split_y[i];
+                split_y[i] = split_y[i+1];
+                split_y[i+1] = swap;
+            }
+        }
+    }
+    printf("split_x: %f %f %f %f %f\n", split_x[0], split_x[1], split_x[2], split_x[3], split_x[4]);
+    printf("split_y: %f %f %f %f %f\n\n", split_y[0], split_y[1], split_y[2], split_y[3], split_y[4]);
+
+    printf("sectors:\n");
+    Sector sectors[sclen * sclen];
+    for (int i = 0; i < sclen - 1; ++i) {
+        for (int j = 0; j < sclen - 1; ++j) {
+            s.xmin = split_x[i];
+            s.xmax = split_x[i+1];
+            s.ymin = split_y[j];
+            s.ymax = split_y[j+1];
+
+            sectors[num_sectors_1d*j + i] = s;
+        }
+    }
+    for (int i = 0; i < sclen - 1; ++i) {
+        for (int j = 0; j < sclen - 1; ++j) {
+            PrintSector(sectors[num_sectors_1d*j + i]);
+        }
+    }
+    exit(0);
+
     
     fprintf(file_json, "{\"pairs\":[\n");
     for (int i = 0; i < npoints; ++i) {
 
-        // TODO: select a sector (two random ints from 0-3 to hit x, y sector)
+        // select sector
+        if (use_sectors) {
+            //xmin = sector_x[RandMinMaxI(0, 2)];
+            //xmax = 
+        }
 
+        f64 xmin, xmax, ymin, ymax;
         // calculate point pair
-        HsPair p = RandomPair(-180.0, 180.0, -90.0, 90.0);
-        x0 = p.x0;
-        y0 = p.y0;
-        x1 = p.x1;
-        y1 = p.y1;
+        p = RandomPair(xmin, xmax, ymin, ymax);
 
         // calculate control answer
-        hsdist = ReferenceHaversine(x0, y0, x1, y1, earth_radius);
+        hsdist = ReferenceHaversine(p.x0, p.y0, p.x1, p.y1, earth_radius);
         hsdist_sum += hsdist;
         
         // write pair to json
         fprintf(file_json, "    {\"x0\":%.16f, \"y0\":%.16f, \"x1\":%.16f, \"y1\":%.16f}",
-                x0, y0, x1, y1);
+                p.x0, p.y0, p.x1, p.y1);
         if (i + 1 < npoints) {
             fprintf(file_json, ",");
         }
