@@ -4,7 +4,7 @@ u64 GetSystimeMySec() {
     u64 systime;
     struct timeval tm;
     gettimeofday(&tm, NULL);
-    systime = (u32) tm.tv_sec*1000000 + tm.tv_usec; // millisecs
+    systime = (u32) tm.tv_sec*1000000 + tm.tv_usec; // microsecs 
 
     return systime;
 }
