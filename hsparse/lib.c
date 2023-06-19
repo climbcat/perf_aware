@@ -6,6 +6,8 @@
 #include "math.h"
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -22,6 +24,11 @@ typedef double f64;
 #define MEGABYTE 1024*1024
 #define GIGABYTE 1024*1024*1024
 
+
+//
+// cmd line args
+
+
 bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     for (int i = 0; i < argc; ++i) {
         char *arg = argv[i];
@@ -34,6 +41,11 @@ bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     }
     return false;
 }
+
+
+//
+// file I/O
+
 
 char *LoadFileMMAP(char *filepath, u64 *size_bytes = NULL) {
     FILE *f = fopen(filepath, "rb");
@@ -58,7 +70,50 @@ char *LoadFileMMAP(char *filepath, u64 *size_bytes = NULL) {
     return str;
 }
 
-// Performance aware programming / Casey's stuff:
+
+//
+// timing
+
+
+u64 GetSystimeMySec() {
+    u64 systime;
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
+    systime = (u32) tm.tv_sec*1000000 + tm.tv_usec; // microsecs 
+
+    return systime;
+}
+
+u64 GetRdtsc() {
+    u64 ticks;
+    unsigned c,d;
+    asm volatile("rdtsc" : "=a" (c), "=d" (d));
+    ticks = (( (u64)c ) | (( (u64)d ) << 32)); // unknown cpu units
+
+    return ticks;
+}
+
+void CalibrateRdtsc(u64 num_my_secs) {
+
+
+    u64 ticks_start = GetRdtsc();
+    u64 systime_start = GetSystimeMySec();
+
+    // busy wait
+    while (GetSystimeMySec() - systime_start < num_my_secs) {}
+
+    u64 ticks_diff = GetRdtsc() - ticks_start;
+    u64 systime_diff = GetSystimeMySec() - systime_start;
+
+    float units = ticks_diff / (float) systime_diff;
+
+    printf("Processor Frequency [MHz] (rdtsc pr. mysec over %.f millisecs): %f\n", num_my_secs / (float) 1000, units);
+}
+
+
+//
+// Haversine functions
+
 
 static f64 Square(f64 A)
 {

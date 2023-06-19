@@ -240,24 +240,35 @@ f64 ParseDouble(char *str, u8 len) {
 #define EARTH_RADIUS 6372.8
 
 void ParseHsPointsJson(char *filename) {
+    
+    // sys / process timing [secs]
+    u64 time_0 = GetSystimeMySec();
+    u64 tick_0 = GetRdtsc();
+
+    // read
     u64 size_bytes;
     char* dest_json = LoadFileMMAP(filename, &size_bytes);
 
+    u64 tick_1_read = GetRdtsc();
+
+    // parse floats and put into data storage
     Tokenizer tokenizer;
     tokenizer.at = dest_json;
 
-    // parse floats and put into data storage
-    f64* floc = (f64*) malloc(size_bytes/2);
+    f64* data = (f64*) malloc(size_bytes/2);
     u32 fidx = 0;
     Token tok;
     do {
         tok = GetToken(&tokenizer);
         if (tok.type == TOK_DOUBLE) {
-            floc[fidx] = ParseDouble(tok.str, tok.len);
+            data[fidx] = ParseDouble(tok.str, tok.len);
             ++fidx;
         }
     } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF);
 
+    u64 tick_2_parse = GetRdtsc();
+
+    // do the sum
     f64 sum = 0;
     f64 mean = 0;
     u32 idx = 0;
@@ -267,10 +278,10 @@ void ParseHsPointsJson(char *filename) {
     for (int p = 0; p < npairs; ++p) {
         idx = p * 4;
 
-        x0 = floc[idx];
-        y0 = floc[idx + 1];
-        x1 = floc[idx + 2];
-        y1 = floc[idx + 3];
+        x0 = data[idx];
+        y0 = data[idx + 1];
+        x1 = data[idx + 2];
+        y1 = data[idx + 3];
         d = ReferenceHaversine(x0, y0, x1, y1, EARTH_RADIUS);
         sum += d;
 
@@ -278,6 +289,28 @@ void ParseHsPointsJson(char *filename) {
     }
     mean = sum / npairs;
     printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
+
+    u64 tick_3_sum = GetRdtsc();
+    
+    // print timing results
+    printf("\n");
+    CalibrateRdtsc(10000);
+    u64 time_1 = GetSystimeMySec();
+
+    u64 total_ticks = tick_3_sum - tick_0;
+
+    u64 tdiff_read = tick_1_read - tick_0;
+    u64 tdiff_parse = tick_2_parse - tick_1_read;
+    u64 tdiff_sum = tick_3_sum - tick_2_parse;
+
+    f64 tpercent_read = tdiff_read / (float) total_ticks * 100;
+    f64 tpercent_parse = tdiff_parse / (float) total_ticks * 100;
+    f64 tpercent_sum = tdiff_sum / (float) total_ticks * 100;
+
+    printf("Total time:  %f secs\n", (time_1 - time_0) / (double) 1000000.0);
+    printf("Read ticks:  %lu (%.2f %%)\n", tdiff_read, tpercent_read);
+    printf("Parse ticks: %lu (%.2f %%)\n", tdiff_parse, tpercent_parse);
+    printf("Sum ticks:   %lu (%.2f %%)\n", tdiff_sum, tpercent_sum);
 }
 
 
@@ -325,6 +358,8 @@ void Test() {
 }
 
 int main (int argc, char **argv) {
+
+
     if (ContainsArg("--help", argc, argv) || argc != 2) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
         exit(0);
@@ -335,5 +370,9 @@ int main (int argc, char **argv) {
     }
 
     char *filename = argv[1];
+
+
+
     ParseHsPointsJson(filename);
+
 }
