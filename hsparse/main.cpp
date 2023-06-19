@@ -240,14 +240,14 @@ f64 ParseDouble(char *str, u8 len) {
 #define EARTH_RADIUS 6372.8
 
 void ParseHsPointsJson(char *filename) {
-    char* dest_json = (char*) malloc(10 * MEGABYTE);
+    u64 size_bytes;
+    char* dest_json = LoadFileMMAP(filename, &size_bytes);
+
     Tokenizer tokenizer;
     tokenizer.at = dest_json;
-    LoadFilePathBin(filename, (u8*) dest_json);
-    //printf("Loaded file '%s' contains:\n%s\n", filename, dest_json);
 
     // parse floats and put into data storage
-    f64* floc = (f64*) malloc(MEGABYTE);
+    f64* floc = (f64*) malloc(size_bytes/2);
     u32 fidx = 0;
     Token tok;
     do {
@@ -284,9 +284,8 @@ void ParseHsPointsJson(char *filename) {
 void Test() {
     printf("Running tests...\n");
 
-    u8* dest_json = (u8*) malloc(10 * MEGABYTE);
     const char *filename = "parsetest.json";
-    LoadFilePathBin((char*) filename, dest_json);
+    u8* dest_json = (u8*) LoadFileMMAP((char*) filename);
     printf("loaded file %s:\n%s\n", filename, dest_json);
 
     // parse tokens and print
@@ -317,8 +316,8 @@ void Test() {
             tok = GetToken(&tokenizer);
             if (tok.type == TOK_DOUBLE) {
                 f64 val = ParseDouble(tok.str, tok.len);
-                printf("str value:    %.*s\n", tok.len, tok.str);
-                printf("parsed value: %.15f\n\n", val);
+                //printf("str value:    %.*s\n", tok.len, tok.str);
+                //printf("parsed value: %.15f\n\n", val);
             }
             ++iter;
         } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF && iter < 100);

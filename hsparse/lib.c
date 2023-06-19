@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <cstdint>
 #include "math.h"
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -33,21 +35,27 @@ bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     return false;
 }
 
-
-u32 LoadFilePathBin(char* filepath, u8* dest) {
-    assert(dest != NULL && "data destination must be valid");
-    u32 len = 0;
-
-    FILE * f = fopen(filepath, "rb");
-    if (f) {
-        fseek(f, 0, SEEK_END);
-        len = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        fread(dest, 1, len, f);
-        fclose(f);
+char *LoadFileMMAP(char *filepath, u64 *size_bytes = NULL) {
+    FILE *f = fopen(filepath, "rb");
+    if (f == NULL) {
+        printf("Could not open file: %s\n", filepath);
+        exit(1);
     }
 
-    return len;
+    s32 fd = fileno(f);
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        printf("Could not get file size: %s\n", filepath);
+        exit(1);
+    }
+
+    char *str = (char*) mmap(NULL, sb.st_size + 1, PROT_READ, MAP_PRIVATE | MAP_SHARED, fd, 0);
+    if (size_bytes != NULL) {
+        *size_bytes = sb.st_size;
+    }
+
+    fclose(f);
+    return str;
 }
 
 // Performance aware programming / Casey's stuff:
