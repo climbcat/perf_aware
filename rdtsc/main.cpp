@@ -1,6 +1,6 @@
 #include "lib.c"
 
-u64 GetSystime_Ms() {
+u64 GetSystimeMySec() {
     u64 systime;
     struct timeval tm;
     gettimeofday(&tm, NULL);
@@ -18,30 +18,37 @@ u64 GetRdtsc() {
     return ticks;
 }
 
-void CalibrateRdtsc(u32 num_secs) {
-
-    printf("Calibrating rdtsc pr. ms over %u secs...\n", num_secs);
+void CalibrateRdtsc(u64 num_my_secs) {
+    printf("Calibrating rdtsc pr. ms over %lu microsecs / %.3f millisecs \n", num_my_secs, num_my_secs / (float) 1000);
 
     u64 ticks_start = GetRdtsc();
-    u64 systime_start = GetSystime_Ms();
-    sleep(num_secs);
-    u64 ticks_diff = GetRdtsc() - ticks_start;
-    u64 systime_diff = GetSystime_Ms() - systime_start;
+    u64 systime_start = GetSystimeMySec();
 
-    //printf("cpu (tsc): %lu, sys (ms): %lu\n", ticks_diff, systime_diff);
-    f64 units = ticks_diff / (f64) systime_diff;
-    printf("rdtsc pr. ms: %f\n", units);
+    // busy wait
+    while (GetSystimeMySec() - systime_start < num_my_secs) {}
+
+    u64 ticks_diff = GetRdtsc() - ticks_start;
+    u64 systime_diff = GetSystimeMySec() - systime_start;
+
+    float units = ticks_diff / (float) systime_diff;
+    printf("rdtsc pr. mysec: %f\n", units);
 }
 
 
 
 
 int main (int argc, char **argv) {
-    if (CLAContainsArg("--help", argc, argv) || argc != 2) {
-        printf("Usage:\n        timer <calibration_secs>\n");
+    if (CLAContainsArg("--help", argc, argv)) {
+        printf("Usage:\n        timer <interval_mysecs>\n");
         exit(0);
     }
 
-    u32 interval_secs = ParseInt(argv[1]);
-    CalibrateRdtsc(interval_secs);
+    u64 interval_mysecs;
+    if (argc == 1) {
+        interval_mysecs = 10000; // 10 millisecs gives a rough estimate
+    }
+    else {
+        interval_mysecs = ParseInt(argv[1]);
+    }
+    CalibrateRdtsc(interval_mysecs);
 }

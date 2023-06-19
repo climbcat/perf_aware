@@ -23,6 +23,8 @@ bool CLAContainsArg(const char *search, int argc, char **argv, int *idx = NULL) 
     return false;
 }
 u32 ParseInt(char *text) {
+    // TODO: error handling
+
     u32 val = 0;
     u32 multiplier = 1;
 
