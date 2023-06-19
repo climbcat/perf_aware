@@ -325,12 +325,12 @@ void Test() {
 }
 
 int main (int argc, char **argv) {
-    if (ContainsArg("--test", argc, argv)) {
-        Test();
+    if (ContainsArg("--help", argc, argv) || argc != 2) {
+        printf("Usage:\n        hsparse <pairs_json_file>\n");
         exit(0);
     }
-    if (argc != 2) {
-        printf("hspoints json filename missing\n");
+    if (ContainsArg("--test", argc, argv)) {
+        Test();
         exit(0);
     }
 
