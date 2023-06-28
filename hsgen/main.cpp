@@ -46,74 +46,10 @@ void CreateHaversinePointsJson(u32 npoints, u32 seed, bool use_sectors) {
     f64 earth_radius = 6372.8;
     HsPair p;
 
-    if (use_sectors) {
-        Sector s;
-        
-        u8 num_sectors_1d = 4;
-        u32 sclen = num_sectors_1d + 1;
-        f64 split_x[sclen];
-        f64 split_y[sclen];
-        split_x[0] = -180.0;
-        split_x[sclen-1] = 180.0;
-        split_y[0] = -90.0;
-        split_y[sclen-1] = 90.0;
-        for (int i = 1; i < sclen - 1; ++i) {
-            split_x[i] = 180.0f * RandPM1();
-            split_y[i] = 90.0f * RandPM1();
-        }
-        printf("split_x: %f %f %f %f %f\n", split_x[0], split_x[1], split_x[2], split_x[3], split_x[4]);
-        printf("split_y: %f %f %f %f %f\n\n", split_y[0], split_y[1], split_y[2], split_y[3], split_y[4]);
-        // sort split values
-        f64 swap;
-
-        u32 splitters = 5;
-        for (int j = 0; j < sclen - 1; ++j) {
-            for (int i = 0; i < sclen - 2 - j; ++i) {
-            
-                if (split_x[i] > split_x[i+1]) {
-                    swap = split_x[i];
-                    split_x[i] = split_x[i+1];
-                    split_x[i+1] = swap;
-                }
-                if (split_y[i] > split_y[i+1]) {
-                    swap = split_y[i];
-                    split_y[i] = split_y[i+1];
-                    split_y[i+1] = swap;
-                }
-            }
-        }
-        printf("split_x: %f %f %f %f %f\n", split_x[0], split_x[1], split_x[2], split_x[3], split_x[4]);
-        printf("split_y: %f %f %f %f %f\n\n", split_y[0], split_y[1], split_y[2], split_y[3], split_y[4]);
-
-        printf("sectors:\n");
-        Sector sectors[sclen * sclen];
-        for (int i = 0; i < sclen - 1; ++i) {
-            for (int j = 0; j < sclen - 1; ++j) {
-                s.xmin = split_x[i];
-                s.xmax = split_x[i+1];
-                s.ymin = split_y[j];
-                s.ymax = split_y[j+1];
-
-                sectors[num_sectors_1d*j + i] = s;
-            }
-        }
-        for (int i = 0; i < sclen - 1; ++i) {
-            for (int j = 0; j < sclen - 1; ++j) {
-                PrintSector(sectors[num_sectors_1d*j + i]);
-            }
-        }
-    }
-
-    
     fprintf(file_json, "{\"pairs\":[\n");
+
     Sector s;
     for (int i = 0; i < npoints; ++i) {
-
-        // select sector
-        if (use_sectors) {
-            printf("TODO: impl. sectors\n");
-        }
-
         // calculate point pair
         p = RandomPair(s.xmin, s.xmax, s.ymin, s.ymax);
 
