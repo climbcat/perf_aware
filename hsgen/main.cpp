@@ -33,7 +33,7 @@ void PrintSector(Sector s) {
 
 
 
-void CreateHaversinePointsJson(u32 npoints, u32 seed, bool use_sectors) {
+void CreateHaversinePointsJson(u32 npoints, u32 seed) {
 
     const char *filename_json = "hspairs.json";
     const char *filename_bin = "hsdist.bin";
@@ -113,7 +113,14 @@ u32 ParseInt(char *text) {
 
 int main (int argc, char **argv) {
     if (ContainsArg("--help", argc, argv) || ContainsArg("-h", argc, argv)) {
-        printf("--help:          display help (this text)\n--test:          run tests and exit\n--sectors:       fragment points into sectors\n--npoits [int]:  number of points to generate\n--seed [int]:    set random seed\n");
+        printf("\
+    Usage:\n\n\
+        hsgen --npoints 10000\n\
+        hsgen --npoints 10000 -seed 0\n\n\
+        --help:          display help (this text)\n \
+        --test:          run tests and exit\n\
+        --npoits [int]:  number of points to generate\n\
+        --seed [int]:    set random seed\n");
         exit(0);
     }
     if (ContainsArg("--test", argc, argv)) {
@@ -121,10 +128,6 @@ int main (int argc, char **argv) {
         exit(0);
     }
 
-    bool sectors = false;
-    if (ContainsArg("--sectors", argc, argv)) {
-        sectors = true;
-    }
     u32 seed = 0;
     if (ContainsArg("--seed", argc, argv)) {
         seed = ParseInt(GetArgValue("--seed", argc, argv));
@@ -134,5 +137,5 @@ int main (int argc, char **argv) {
         npoints = ParseInt(GetArgValue("--npoints", argc, argv));
     }
 
-    CreateHaversinePointsJson(npoints, seed, sectors);
+    CreateHaversinePointsJson(npoints, seed);
 }

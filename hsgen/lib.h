@@ -63,7 +63,7 @@ unsigned long _hash(unsigned long x) {
 unsigned long g_state[7];
 bool g_didinit = false;
 #define Random() Kiss_Random(g_state)
-unsigned long RandInit(unsigned long seed = 0) {
+u32 RandInit(u32 seed = 0) {
     if (g_didinit == true)
         return 0;
 
