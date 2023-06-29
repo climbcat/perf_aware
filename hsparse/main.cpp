@@ -1,4 +1,4 @@
-#include "lib.c"
+#include "../lib.c"
 
 struct Tokenizer {
     char *at;
@@ -196,60 +196,19 @@ Token GetToken(Tokenizer *tokenizer) {
 }
 
 
-f64 ParseDouble(char *str, u8 len) {
-    f64 val = 0;
-    f64 multiplier = 1;
 
-    // handle sign
-    bool sgned = str[0] == '-';
-    if (sgned) {
-        ++str;
-    }
-
-    u8 decs_denom = 0;
-    while ((str[decs_denom] != '.') && (decs_denom < len)) {
-        ++decs_denom;
-    }
-
-    // decimals before dot
-    for (int i = 0; i < decs_denom; ++i) {
-        char ascii = str[decs_denom - 1 - i];
-        u8 decimal = ascii - 48;
-        val += decimal * multiplier;
-        multiplier *= 10;
-    }
-
-    // decimals after dot
-    multiplier = 0.1f;
-    u8 decs_nom = len - 1 - decs_denom;
-    for (int i = decs_denom + 1; i < len; ++i) {
-        char ascii = str[i];
-        u8 decimal = ascii - 48;
-        val += decimal * multiplier;
-        multiplier *= 0.1;
-    }
-
-    // handle the sign
-    if (sgned) {
-        val *= -1;
-    }
-
-    return val;
-}
-
-#define EARTH_RADIUS 6372.8
 
 void ParseHsPointsJson(char *filename) {
     
     // sys / process timing [secs]
-    u64 time_0 = GetSystimeMySec();
-    u64 tick_0 = GetRdtsc();
+    u64 time_0 = ReadSystemTimerMySec();
+    u64 tick_0 = ReadCPUTimer();
 
     // read
     u64 size_bytes;
     char* dest_json = LoadFileMMAP(filename, &size_bytes);
 
-    u64 tick_1_read = GetRdtsc();
+    u64 tick_1_read = ReadCPUTimer();
 
     // parse floats and put into data storage
     Tokenizer tokenizer;
@@ -266,7 +225,7 @@ void ParseHsPointsJson(char *filename) {
         }
     } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF);
 
-    u64 tick_2_parse = GetRdtsc();
+    u64 tick_2_parse = ReadCPUTimer();
 
     // do the sum
     f64 sum = 0;
@@ -290,12 +249,12 @@ void ParseHsPointsJson(char *filename) {
     mean = sum / npairs;
     printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
 
-    u64 tick_3_sum = GetRdtsc();
+    u64 tick_3_sum = ReadCPUTimer();
     
     // print timing results
     printf("\n");
     CalibrateRdtsc(10000);
-    u64 time_1 = GetSystimeMySec();
+    u64 time_1 = ReadSystemTimerMySec();
 
     u64 total_ticks = tick_3_sum - tick_0;
 
@@ -358,21 +317,16 @@ void Test() {
 }
 
 int main (int argc, char **argv) {
-
-
-    if (ContainsArg("--help", argc, argv) || argc != 2) {
+    if (CLAContainsArg("--help", argc, argv) || argc != 2) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
         exit(0);
     }
-    if (ContainsArg("--test", argc, argv)) {
+    if (CLAContainsArg("--test", argc, argv)) {
         Test();
         exit(0);
     }
 
     char *filename = argv[1];
 
-
-
     ParseHsPointsJson(filename);
-
 }

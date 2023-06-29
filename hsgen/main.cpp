@@ -1,4 +1,4 @@
-#include "lib.h"
+#include "../lib.c"
 
 
 struct HsPair {
@@ -85,34 +85,8 @@ void Test() {
     printf("done\n");
 }
 
-u32 ParseInt(char *text) {
-    u32 val = 0;
-    u32 multiplier = 1;
-
-    // signed?
-    bool sgned = text[0] == '-';
-    if (sgned) {
-        ++text;
-    }
-
-    u32 len = strlen(text);
-
-    // decimals before dot
-    for (int i = 0; i < len; ++i) {
-        val += (text[len - 1 - i] - 48) * multiplier;
-        multiplier *= 10;
-    }
-
-    // handle the sign
-    if (sgned) {
-        val *= -1;
-    }
-
-    return val;
-}
-
 int main (int argc, char **argv) {
-    if (ContainsArg("--help", argc, argv) || ContainsArg("-h", argc, argv)) {
+    if (CLAContainsArg("--help", argc, argv) || CLAContainsArg("-h", argc, argv)) {
         printf("\
     Usage:\n\n\
         hsgen --npoints 10000\n\
@@ -123,18 +97,18 @@ int main (int argc, char **argv) {
         --seed [int]:    set random seed\n");
         exit(0);
     }
-    if (ContainsArg("--test", argc, argv)) {
+    if (CLAContainsArg("--test", argc, argv)) {
         Test();
         exit(0);
     }
 
     u32 seed = 0;
-    if (ContainsArg("--seed", argc, argv)) {
-        seed = ParseInt(GetArgValue("--seed", argc, argv));
+    if (CLAContainsArg("--seed", argc, argv)) {
+        seed = ParseInt(CLAGetArgValue("--seed", argc, argv));
     }
     u32 npoints = 20;
-    if (ContainsArg("--npoints", argc, argv)) {
-        npoints = ParseInt(GetArgValue("--npoints", argc, argv));
+    if (CLAContainsArg("--npoints", argc, argv)) {
+        npoints = ParseInt(CLAGetArgValue("--npoints", argc, argv));
     }
 
     CreateHaversinePointsJson(npoints, seed);

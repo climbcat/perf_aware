@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <cstdint>
 #include <sys/time.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include "math.h"
 
 typedef uint8_t u8;
@@ -27,7 +29,81 @@ typedef double f64;
 
 
 //
+// parse numbers from string
+
+
+u32 ParseInt(char *text) {
+    u32 val = 0;
+    u32 multiplier = 1;
+
+    // signed?
+    bool sgned = text[0] == '-';
+    if (sgned) {
+        ++text;
+    }
+
+    u32 len = strlen(text);
+
+    // decimals before dot
+    for (int i = 0; i < len; ++i) {
+        val += (text[len - 1 - i] - 48) * multiplier;
+        multiplier *= 10;
+    }
+
+    // handle the sign
+    if (sgned) {
+        val *= -1;
+    }
+
+    return val;
+}
+
+
+f64 ParseDouble(char *str, u8 len) {
+    f64 val = 0;
+    f64 multiplier = 1;
+
+    // handle sign
+    bool sgned = str[0] == '-';
+    if (sgned) {
+        ++str;
+    }
+
+    u8 decs_denom = 0;
+    while ((str[decs_denom] != '.') && (decs_denom < len)) {
+        ++decs_denom;
+    }
+
+    // decimals before dot
+    for (int i = 0; i < decs_denom; ++i) {
+        char ascii = str[decs_denom - 1 - i];
+        u8 decimal = ascii - 48;
+        val += decimal * multiplier;
+        multiplier *= 10;
+    }
+
+    // decimals after dot
+    multiplier = 0.1f;
+    u8 decs_nom = len - 1 - decs_denom;
+    for (int i = decs_denom + 1; i < len; ++i) {
+        char ascii = str[i];
+        u8 decimal = ascii - 48;
+        val += decimal * multiplier;
+        multiplier *= 0.1;
+    }
+
+    // handle the sign
+    if (sgned) {
+        val *= -1;
+    }
+
+    return val;
+}
+
+
+//
 // random
+
 
 #ifndef ULONG_MAX
 #  define ULONG_MAX ((unsigned long)0xffffffffffffffffUL)
@@ -93,6 +169,7 @@ double RandPM1() {
 }
 
 int RandMinMaxI(int min, int max) {
+    // TODO: assert macro
     //assert(max > min);
     return Random() % (max - min + 1) + min;
 }
@@ -101,7 +178,8 @@ int RandMinMaxI(int min, int max) {
 //
 // cmd-line args
 
-bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
+
+bool CLAContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     for (int i = 0; i < argc; ++i) {
         char *arg = argv[i];
         if (!strcmp(argv[i], search)) {
@@ -114,7 +192,7 @@ bool ContainsArg(const char *search, int argc, char **argv, int *idx = NULL) {
     return false;
 }
 
-bool ContainsArgs(const char *search_a, const char *search_b, int argc, char **argv) {
+bool CLAContainsArgs(const char *search_a, const char *search_b, int argc, char **argv) {
     bool found_a = false;
     bool found_b = false;
     for (int i = 0; i < argc; ++i) {
@@ -128,9 +206,9 @@ bool ContainsArgs(const char *search_a, const char *search_b, int argc, char **a
     return found_a && found_b;
 }
 
-char *GetArgValue(const char *key, int argc, char **argv) {
+char *CLAGetArgValue(const char *key, int argc, char **argv) {
     int i;
-    bool error = !ContainsArg(key, argc, argv, &i) || i == argc - 1;;
+    bool error = !CLAContainsArg(key, argc, argv, &i) || i == argc - 1;;
     if (error == false) {
         char *val = argv[i+1];
         error = strlen(val) > 1 && val[0] == '-' && val[1] == '-';
@@ -144,7 +222,76 @@ char *GetArgValue(const char *key, int argc, char **argv) {
 
 
 //
+// file I/O
+
+
+char *LoadFileMMAP(char *filepath, u64 *size_bytes = NULL) {
+    FILE *f = fopen(filepath, "rb");
+    if (f == NULL) {
+        printf("Could not open file: %s\n", filepath);
+        exit(1);
+    }
+
+    s32 fd = fileno(f);
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        printf("Could not get file size: %s\n", filepath);
+        exit(1);
+    }
+
+    char *str = (char*) mmap(NULL, sb.st_size + 1, PROT_READ, MAP_PRIVATE | MAP_SHARED, fd, 0);
+    if (size_bytes != NULL) {
+        *size_bytes = sb.st_size;
+    }
+
+    fclose(f);
+    return str;
+}
+
+
+//
+// timing
+
+
+u64 ReadSystemTimerMySec() {
+    u64 systime;
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
+    systime = (u32) tm.tv_sec*1000000 + tm.tv_usec; // microsecs 
+
+    return systime;
+}
+
+u64 ReadCPUTimer() {
+    u64 ticks;
+    unsigned c,d;
+    asm volatile("rdtsc" : "=a" (c), "=d" (d));
+    ticks = (( (u64)c ) | (( (u64)d ) << 32)); // unknown cpu units
+
+    return ticks;
+}
+
+void CalibrateRdtsc(u64 num_my_secs) {
+
+
+    u64 ticks_start = ReadCPUTimer();
+    u64 systime_start = ReadSystemTimerMySec();
+
+    // busy wait
+    while (ReadSystemTimerMySec() - systime_start < num_my_secs) {}
+
+    u64 ticks_diff = ReadCPUTimer() - ticks_start;
+    u64 systime_diff = ReadSystemTimerMySec() - systime_start;
+
+    float units = ticks_diff / (float) systime_diff;
+
+    printf("Processor Frequency [MHz] (rdtsc pr. mysec over %.f millisecs): %f\n", num_my_secs / (float) 1000, units);
+}
+
+
+//
 // performance aware:
+
 
 static f64 Square(f64 A)
 {
@@ -159,6 +306,7 @@ static f64 Deg2Rad(f64 Degrees)
 }
 
 // NOTE(casey): EarthRadius is generally expected to be 6372.8
+#define EARTH_RADIUS 6372.8
 static f64 ReferenceHaversine(f64 X0, f64 Y0, f64 X1, f64 Y1, f64 EarthRadius)
 {
     /* NOTE(casey): This is not meant to be a "good" way to calculate the Haversine distance.
