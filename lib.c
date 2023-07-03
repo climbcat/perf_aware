@@ -640,15 +640,17 @@ void CalibrateRdtsc(u64 num_my_secs) {
 struct ProfilerBlock {
     ProfilerBlock *next = NULL;
     String name;
-    u64 tsc_start = 0;
-    u64 tsc_end = 0;
+    u64 tsc_diff = 0;
 };
 
 struct Profiler {
     MArena arena;
     ProfilerBlock *first = NULL;
     ProfilerBlock *current = NULL;
-    bool block_open = false;
+
+    u64 cputime_diff = 0;
+    u64 systime_diff = 0;
+    float cpu_freq = 0;
 };
 
 Profiler ProfilerInit() {
@@ -657,51 +659,56 @@ Profiler ProfilerInit() {
     prof.arena = ArenaCreate();
     prof.first = (ProfilerBlock*) ArenaPush(&prof.arena, &block, sizeof(block));
     prof.current = prof.first;
+    prof.systime_diff = ReadSystemTimerMySec();
+    prof.cputime_diff = ReadCPUTimer();
 
     return prof;
 }
-void ProfilerReadBlockStart(Profiler *p) {
-    assert(p->block_open == false && "profiler can't open block, already open");
-    printf("prof_start_block\n");
-
+ProfilerBlock *ProfilerReadBlockStart(Profiler *p, const char *func_name) {
     ProfilerBlock block;
     ProfilerBlock *newblock = (ProfilerBlock*) ArenaPush(&p->arena, &block, sizeof(block));
     p->current = (ProfilerBlock*) InsertAfter1(p->current, newblock);
-    p->current->name = StrLiteral(&p->arena, "function_name_placeholder");
-    p->current->tsc_start = ReadCPUTimer();
-    p->block_open = true;
+    p->current->name = StrLiteral(&p->arena, func_name);
+    p->current->tsc_diff = ReadCPUTimer();
+    return p->current;
 }
-void ProfilerReadBlockEnd(Profiler *p) {
-    assert(p->block_open == true && "profiler can't close block, not open");
-    printf("prof_end_block\n");
-
-    p->current->tsc_end = ReadCPUTimer();
-    p->block_open = false;
+void ProfilerReadBlockEnd(Profiler *p, ProfilerBlock *block) {
+    block->tsc_diff = ReadCPUTimer() - block->tsc_diff;
+}
+void ProfilerStop(Profiler *p) {
+    p->systime_diff = ReadSystemTimerMySec() - p->systime_diff;
+    p->cputime_diff = ReadCPUTimer() - p->cputime_diff;
+    p->cpu_freq = (float) p->cputime_diff / p->systime_diff;
+    p->current = NULL;
 }
 void ProfilerPrint(Profiler *p) {
-    ProfilerBlock *current = p->first->next; // first is empty
+    ProfilerBlock *current = p->first->next;
+    printf("\n");
+    printf("Systime: %lu mysec\n", p->systime_diff);
+    printf("CPU time: %lu\n", p->cputime_diff);
+    printf("CPU freq [ticks/mysec]: %f\n", p->cpu_freq);
     while (current != NULL) {
         StrPrint("%s: ", current->name);
-        printf("%lu -> %lu\n", current->tsc_start, current->tsc_end);
+        printf("%lu / %f %%\n", current->tsc_diff, (double) current->tsc_diff / p->cputime_diff * 100);
         current = current->next;
     }
 }
 
-
 Profiler g_prof = ProfilerInit();
 class ProfileScopeMechanism {
+    ProfilerBlock *block;
 public:
-    ProfileScopeMechanism() {
-        ProfilerReadBlockStart(&g_prof);
+    ProfileScopeMechanism(const char * func_name) {
+        this->block = ProfilerReadBlockStart(&g_prof, func_name);
     }
     ~ProfileScopeMechanism() {
-        ProfilerReadBlockEnd(&g_prof);
+        ProfilerReadBlockEnd(&g_prof, this->block);
     }
 };
 
-#define TimeFunction ProfileScopeMechanism __timer_mechanism__;
+#define TimeFunction ProfileScopeMechanism __prof_mechanism__(__FUNCTION__);
 //#define TimeBlock ???
-#define TimePrint ProfilerPrint(&g_prof);
+#define TimePrint ProfilerStop(&g_prof); ProfilerPrint(&g_prof);
 
 
 //

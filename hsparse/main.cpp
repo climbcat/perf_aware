@@ -199,6 +199,7 @@ Token GetToken(Tokenizer *tokenizer) {
 
 
 void ParseHsPointsJson(char *filename) {
+    TimeFunction;
     
     // sys / process timing [secs]
     u64 time_0 = ReadSystemTimerMySec();
@@ -319,22 +320,22 @@ void Test() {
 
 int main (int argc, char **argv) {
     {
-    TimeFunction
+        TimeFunction;
 
+        if (CLAContainsArg("--help", argc, argv) || argc != 2) {
+            printf("Usage:\n        hsparse <pairs_json_file>\n");
+            exit(0);
+        }
+        if (CLAContainsArg("--test", argc, argv)) {
+            Test();
+            exit(0);
+        }
 
-    if (CLAContainsArg("--help", argc, argv) || argc != 2) {
-        printf("Usage:\n        hsparse <pairs_json_file>\n");
-        exit(0);
+        char *filename = argv[1];
+        ParseHsPointsJson(filename);
     }
-    if (CLAContainsArg("--test", argc, argv)) {
-        Test();
-        exit(0);
-    }
 
-    char *filename = argv[1];
-    ParseHsPointsJson(filename);
-    }
-
-
-    TimePrint
+    // TODO: how do we get this automatically?
+    // TODO: and without using the scope block
+    TimePrint;
 }
