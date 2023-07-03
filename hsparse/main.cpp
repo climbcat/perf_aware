@@ -316,7 +316,12 @@ void Test() {
     }
 }
 
+
 int main (int argc, char **argv) {
+    {
+    TimeFunction
+
+
     if (CLAContainsArg("--help", argc, argv) || argc != 2) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
         exit(0);
@@ -327,6 +332,9 @@ int main (int argc, char **argv) {
     }
 
     char *filename = argv[1];
-
     ParseHsPointsJson(filename);
+    }
+
+
+    TimePrint
 }
