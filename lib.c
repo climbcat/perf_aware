@@ -621,22 +621,6 @@ u64 ReadCPUTimer() {
     return ticks;
 }
 
-void CalibrateRdtsc(u64 num_my_secs) {
-    u64 ticks_start = ReadCPUTimer();
-    u64 systime_start = ReadSystemTimerMySec();
-
-    // busy wait
-    while (ReadSystemTimerMySec() - systime_start < num_my_secs) {}
-
-    u64 ticks_diff = ReadCPUTimer() - ticks_start;
-    u64 systime_diff = ReadSystemTimerMySec() - systime_start;
-
-    float units = ticks_diff / (float) systime_diff;
-
-    printf("Processor Frequency [MHz] (rdtsc pr. mysec over %.f millisecs): %f\n", num_my_secs / (float) 1000, units);
-}
-
-
 struct ProfilerBlock {
     ProfilerBlock *next = NULL;
     String name;
