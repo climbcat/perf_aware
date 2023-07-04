@@ -613,11 +613,8 @@ u64 ReadSystemTimerMySec() {
 }
 
 u64 ReadCPUTimer() {
-    u64 ticks;
-    unsigned c,d;
-    asm volatile("rdtsc" : "=a" (c), "=d" (d));
-    ticks = (( (u64)c ) | (( (u64)d ) << 32)); // unknown cpu units
-
+    // gcc:
+    u64 ticks = __builtin_ia32_rdtsc();
     return ticks;
 }
 
@@ -652,6 +649,7 @@ Profiler ProfilerInit() {
 ProfilerBlock *ProfilerReadBlockStart(Profiler *p, const char *func_name) {
     ProfilerBlock *block = (ProfilerBlock*) ArenaPush(&p->arena, &block, sizeof(ProfilerBlock));
     p->current = (ProfilerBlock*) InsertAfter1(p->current, block);
+    p->current->next = NULL;
     p->current->name = StrLiteral(&p->arena, func_name);
     p->current->tsc_diff = ReadCPUTimer();
     return p->current;
