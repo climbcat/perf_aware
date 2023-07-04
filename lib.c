@@ -648,10 +648,10 @@ Profiler ProfilerInit() {
 
     return prof;
 }
+
 ProfilerBlock *ProfilerReadBlockStart(Profiler *p, const char *func_name) {
-    ProfilerBlock block;
-    ProfilerBlock *newblock = (ProfilerBlock*) ArenaPush(&p->arena, &block, sizeof(block));
-    p->current = (ProfilerBlock*) InsertAfter1(p->current, newblock);
+    ProfilerBlock *block = (ProfilerBlock*) ArenaPush(&p->arena, &block, sizeof(ProfilerBlock));
+    p->current = (ProfilerBlock*) InsertAfter1(p->current, block);
     p->current->name = StrLiteral(&p->arena, func_name);
     p->current->tsc_diff = ReadCPUTimer();
     return p->current;
@@ -659,6 +659,7 @@ ProfilerBlock *ProfilerReadBlockStart(Profiler *p, const char *func_name) {
 void ProfilerReadBlockEnd(Profiler *p, ProfilerBlock *block) {
     block->tsc_diff = ReadCPUTimer() - block->tsc_diff;
 }
+
 void ProfilerStop(Profiler *p) {
     p->systime_diff = ReadSystemTimerMySec() - p->systime_diff;
     p->cputime_diff = ReadCPUTimer() - p->cputime_diff;
@@ -668,12 +669,12 @@ void ProfilerStop(Profiler *p) {
 void ProfilerPrint(Profiler *p) {
     ProfilerBlock *current = p->first->next;
     printf("\n");
-    printf("Systime: %lu mysec\n", p->systime_diff);
-    printf("CPU time: %lu\n", p->cputime_diff);
-    printf("CPU freq [ticks/mysec]: %f\n", p->cpu_freq);
+    printf("Total time: %lu mysec", p->systime_diff);
+    printf(" (tsc: %lu,", p->cputime_diff);
+    printf(" freq [tsc/mys]: %f)\n", p->cpu_freq);
     while (current != NULL) {
-        StrPrint("%s: ", current->name);
-        printf("%lu / %f %%\n", current->tsc_diff, (double) current->tsc_diff / p->cputime_diff * 100);
+        StrPrint("  %s: ", current->name);
+        printf("%lu (%f %%)\n", current->tsc_diff, (double) current->tsc_diff / p->cputime_diff * 100);
         current = current->next;
     }
 }
@@ -691,7 +692,7 @@ public:
 };
 
 #define TimeFunction ProfileScopeMechanism __prof_mechanism__(__FUNCTION__);
-//#define TimeBlock ???
+#define TimeBlock(name) ProfileScopeMechanism __prof_mechanism__(name);
 #define TimePrint ProfilerStop(&g_prof); ProfilerPrint(&g_prof);
 
 

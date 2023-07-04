@@ -200,14 +200,15 @@ Token GetToken(Tokenizer *tokenizer) {
 
 void ParseHsPointsJson(char *filename) {
     TimeFunction;
-    
-    // sys / process timing [secs]
-    u64 time_0 = ReadSystemTimerMySec();
-    u64 tick_0 = ReadCPUTimer();
 
     // read
     u64 size_bytes;
-    char* dest_json = LoadFileMMAP(filename, &size_bytes);
+    char* dest_json;
+    {
+        TimeBlock("load data");
+
+        dest_json = LoadFileMMAP(filename, &size_bytes);
+    }
 
     u64 tick_1_read = ReadCPUTimer();
 
@@ -217,15 +218,18 @@ void ParseHsPointsJson(char *filename) {
 
     f64* data = (f64*) malloc(size_bytes/2);
     u32 fidx = 0;
-    Token tok;
-    do {
-        tok = GetToken(&tokenizer);
-        if (tok.type == TOK_DOUBLE) {
-            data[fidx] = ParseDouble(tok.str, tok.len);
-            ++fidx;
-        }
-    } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF);
-
+    {
+        TimeBlock("parse json");
+        Token tok;
+        do {
+        
+            tok = GetToken(&tokenizer);
+            if (tok.type == TOK_DOUBLE) {
+                data[fidx] = ParseDouble(tok.str, tok.len);
+                ++fidx;
+            }
+        } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF);
+    }
     u64 tick_2_parse = ReadCPUTimer();
 
     // do the sum
@@ -235,42 +239,28 @@ void ParseHsPointsJson(char *filename) {
     f64 x0, y0, x1, y1, d;
     u32 npairs = (fidx + 1) / 4;
 
-    for (int p = 0; p < npairs; ++p) {
-        idx = p * 4;
+    {
+        TimeBlock("haversine sum");
+        for (int p = 0; p < npairs; ++p) {
+            idx = p * 4;
 
-        x0 = data[idx];
-        y0 = data[idx + 1];
-        x1 = data[idx + 2];
-        y1 = data[idx + 3];
-        d = ReferenceHaversine(x0, y0, x1, y1, EARTH_RADIUS);
-        sum += d;
+            x0 = data[idx];
+            y0 = data[idx + 1];
+            x1 = data[idx + 2];
+            y1 = data[idx + 3];
+            d = ReferenceHaversine(x0, y0, x1, y1, EARTH_RADIUS);
+            sum += d;
 
-        //printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n", x0, y0, x1, y1, d);
+            //printf("(%.16f, %.16f) (%.16f, %.16f)  ->  %.16f\n", x0, y0, x1, y1, d);
+        }
     }
     mean = sum / npairs;
     printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
 
-    u64 tick_3_sum = ReadCPUTimer();
-    
-    // print timing results
-    printf("\n");
-    CalibrateRdtsc(10000);
-    u64 time_1 = ReadSystemTimerMySec();
-
-    u64 total_ticks = tick_3_sum - tick_0;
-
-    u64 tdiff_read = tick_1_read - tick_0;
-    u64 tdiff_parse = tick_2_parse - tick_1_read;
-    u64 tdiff_sum = tick_3_sum - tick_2_parse;
-
-    f64 tpercent_read = tdiff_read / (float) total_ticks * 100;
-    f64 tpercent_parse = tdiff_parse / (float) total_ticks * 100;
-    f64 tpercent_sum = tdiff_sum / (float) total_ticks * 100;
-
-    printf("Total time:  %f secs\n", (time_1 - time_0) / (double) 1000000.0);
-    printf("Read ticks:  %lu (%.2f %%)\n", tdiff_read, tpercent_read);
-    printf("Parse ticks: %lu (%.2f %%)\n", tdiff_parse, tpercent_parse);
-    printf("Sum ticks:   %lu (%.2f %%)\n", tdiff_sum, tpercent_sum);
+    // printf("Total time:  %f secs\n", (time_1 - time_0) / (double) 1000000.0);
+    // printf("Read ticks:  %lu (%.2f %%)\n", tdiff_read, tpercent_read);
+    // printf("Parse ticks: %lu (%.2f %%)\n", tdiff_parse, tpercent_parse);
+    // printf("Sum ticks:   %lu (%.2f %%)\n", tdiff_sum, tpercent_sum);
 }
 
 
@@ -319,21 +309,17 @@ void Test() {
 
 
 int main (int argc, char **argv) {
-    {
-        TimeFunction;
-
-        if (CLAContainsArg("--help", argc, argv) || argc != 2) {
-            printf("Usage:\n        hsparse <pairs_json_file>\n");
-            exit(0);
-        }
-        if (CLAContainsArg("--test", argc, argv)) {
-            Test();
-            exit(0);
-        }
-
-        char *filename = argv[1];
-        ParseHsPointsJson(filename);
+    if (CLAContainsArg("--help", argc, argv) || argc != 2) {
+        printf("Usage:\n        hsparse <pairs_json_file>\n");
+        exit(0);
     }
+    if (CLAContainsArg("--test", argc, argv)) {
+        Test();
+        exit(0);
+    }
+
+    char *filename = argv[1];
+    ParseHsPointsJson(filename);
 
     // TODO: how do we get this automatically?
     // TODO: and without using the scope block
