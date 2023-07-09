@@ -68,6 +68,8 @@ void PrintToken(Token tok) {
 
 inline
 bool IsWhitespace(char c) {
+    TimeFunction;
+
     return
         c == ' ' ||
         c == '\t' ||
@@ -77,6 +79,7 @@ bool IsWhitespace(char c) {
         c == '\r';
 }
 Token GetToken(Tokenizer *tokenizer) {
+    TimeFunction;
 
     // skip white spaces
     while (IsWhitespace(*tokenizer->at)) {
@@ -235,6 +238,7 @@ void ParseHsPointsJson(char *filename) {
     u32 fidx = 0;
     {
         TimeBlock("parse json");
+
         Token tok;
         do {
         
@@ -256,6 +260,7 @@ void ParseHsPointsJson(char *filename) {
 
     {
         TimeBlock("haversine sum");
+
         for (int p = 0; p < npairs; ++p) {
             idx = p * 4;
 
@@ -324,6 +329,8 @@ void Test() {
 
 
 int main (int argc, char **argv) {
+    TimeProgram;
+
     if (CLAContainsArg("--help", argc, argv) || argc != 2) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
         exit(0);
