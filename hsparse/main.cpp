@@ -68,8 +68,6 @@ void PrintToken(Token tok) {
 
 inline
 bool IsWhitespace(char c) {
-    TimeFunction;
-
     return
         c == ' ' ||
         c == '\t' ||
@@ -214,8 +212,6 @@ Token GetToken(Tokenizer *tokenizer) {
 }
 
 
-
-
 void ParseHsPointsJson(char *filename) {
     TimeFunction;
 
@@ -284,15 +280,20 @@ void ParseHsPointsJson(char *filename) {
 }
 
 
-void Test() {
-    printf("Running tests...\n");
+void Test(u8 rec) {
+    TimeFunction;
 
-    const char *filename = "parsetest.json";
+    printf("Testing recursive profiling ...\n");
+
+    const char *filename = "hspairs.json";
     u8* dest_json = (u8*) LoadFileMMAP((char*) filename);
-    printf("loaded file %s:\n%s\n", filename, dest_json);
+    //printf("loaded file %s:\n%s\n", filename, dest_json);
+    printf("loaded file %s:\n", filename);
 
     // parse tokens and print
     {
+        TimeBlock("parse_gettoken");
+        
         Tokenizer tokenizer;
         tokenizer.at = (char*) dest_json;
         Token tok;
@@ -300,7 +301,7 @@ void Test() {
         printf("parse result of <=100 tokens:\n");
         do {
             tok = GetToken(&tokenizer);
-            PrintToken(tok);
+            //PrintToken(tok);
             ++i;
         } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF && i < 100);
     }
@@ -325,6 +326,11 @@ void Test() {
             ++iter;
         } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF && iter < 100);
     }
+
+    
+    if (rec <= 3) {
+        Test(++rec);
+    }
 }
 
 
@@ -333,15 +339,14 @@ int main (int argc, char **argv) {
 
     if (CLAContainsArg("--help", argc, argv) || argc != 2) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
-        exit(0);
     }
-    if (CLAContainsArg("--test", argc, argv)) {
-        Test();
-        exit(0);
+    else if (CLAContainsArg("--test", argc, argv)) {
+        Test(0);
     }
-
-    char *filename = argv[1];
-    ParseHsPointsJson(filename);
+    else {
+        char *filename = argv[1];
+        ParseHsPointsJson(filename);
+    }
 
     // TODO: how do we get this automatically?
     // TODO: and without using the scope block
