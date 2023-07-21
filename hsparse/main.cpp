@@ -272,22 +272,16 @@ void ParseHsPointsJson(char *filename) {
     }
     mean = sum / npairs;
     printf("Haversine dist mean over %d pairs: %.16f\n", npairs, mean);
-
-    // printf("Total time:  %f secs\n", (time_1 - time_0) / (double) 1000000.0);
-    // printf("Read ticks:  %lu (%.2f %%)\n", tdiff_read, tpercent_read);
-    // printf("Parse ticks: %lu (%.2f %%)\n", tdiff_parse, tpercent_parse);
-    // printf("Sum ticks:   %lu (%.2f %%)\n", tdiff_sum, tpercent_sum);
 }
 
 
-void Test(u8 rec) {
+void TestRec(u8 rec) {
     TimeFunction;
 
     printf("Testing recursive profiling ...\n");
 
     const char *filename = "hspairs.json";
     u8* dest_json = (u8*) LoadFileMMAP((char*) filename);
-    //printf("loaded file %s:\n%s\n", filename, dest_json);
     printf("loaded file %s:\n", filename);
 
     // parse tokens and print
@@ -320,16 +314,13 @@ void Test(u8 rec) {
             tok = GetToken(&tokenizer);
             if (tok.type == TOK_DOUBLE) {
                 f64 val = ParseDouble(tok.str, tok.len);
-                //printf("str value:    %.*s\n", tok.len, tok.str);
-                //printf("parsed value: %.15f\n\n", val);
             }
             ++iter;
         } while (tok.type != TOK_UNDEFINED && tok.type != TOK_EOF && iter < 100);
     }
 
-    
     if (rec <= 3) {
-        Test(++rec);
+        TestRec(++rec);
     }
 }
 
@@ -341,14 +332,10 @@ int main (int argc, char **argv) {
         printf("Usage:\n        hsparse <pairs_json_file>\n");
     }
     else if (CLAContainsArg("--test", argc, argv)) {
-        Test(0);
+        TestRec(0);
     }
     else {
         char *filename = argv[1];
         ParseHsPointsJson(filename);
     }
-
-    // TODO: how do we get this automatically?
-    // TODO: and without using the scope block
-    TimePrint;
 }
