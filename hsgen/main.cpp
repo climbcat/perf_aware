@@ -7,12 +7,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 
-#include "../../baselayer/base.c"
-#include "../../baselayer/memory.c"
-#include "../../baselayer/utils.c"
-#include "../../baselayer/string.c"
-#include "../../baselayer/profile.c"
-
+#include "../../baselayer/baselayer.h"
 #include "../haversine.c"
 
 

@@ -7,12 +7,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 
-#include "../../baselayer/base.c"
-#include "../../baselayer/memory.c"
-#include "../../baselayer/utils.c"
-#include "../../baselayer/string.c"
-#include "../../baselayer/profile.c"
-
+#include "../../baselayer/baselayer.h"
 #include "../haversine.c"
 
 struct Tokenizer {
@@ -221,7 +216,7 @@ void ParseHsPointsJson(char *filename) {
     {
         TimeBlock("load data");
 
-        dest_json = LoadFileMMAP(filename, &size_bytes);
+        dest_json = (char*) LoadFileMMAP(filename, &size_bytes);
     }
 
     u64 tick_1_read = ReadCPUTimer();
@@ -281,7 +276,7 @@ void TestRec(u8 rec) {
     printf("Testing recursive profiling ...\n");
 
     const char *filename = "hspairs.json";
-    u8* dest_json = (u8*) LoadFileMMAP((char*) filename);
+    u8* dest_json = (u8*) LoadFileMMAP((char*) filename, NULL);
     printf("loaded file %s:\n", filename);
 
     // parse tokens and print
